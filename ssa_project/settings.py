@@ -100,6 +100,10 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
+# ReCAPTCHA validation stuff
+
+RECAPTCHA_SECRET_KEY = "6LeMRm4qAAAAAPslEmmSL7zQBpwLV-YHw0R99ytB"
+
 
 # Internationalization
 # https://docs.djangoproject.com/en/6.0/topics/i18n/
