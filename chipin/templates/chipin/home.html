@@ -1,37 +1,22 @@
 {% extends 'chipin/base.html' %}
 {% load static %}
 {% block title %}ChipIn{% endblock %}
-
 {% block content %}
- <h1>Welcome, {{ user.get_username }}</h1>
-
-  <div class="card">
-    <div class="row">
-      <strong>Authentication status:</strong>
-      {% if is_verified %}
-        <span>✅ 2FA verified for this session.</span>
-      {% elif has_device %}
-        <span>⚠️ You have 2FA set up, but you’re not verified in this session.</span>
-      {% else %}
-        <span>❌ No 2FA device enrolled yet.</span>
-      {% endif %}
-    </div>
-
-    <div class="row">
-      {% if not has_device %}
-        <!-- Start the setup wizard -->
-        <a class="btn btn-primary" href="{% url 'two_factor:setup' %}">Setup 2FA (scan QR)</a>
-      {% else %}
-        <a class="btn" href="{% url 'two_factor:profile' %}">Manage 2FA</a>
-        <a class="btn" href="{% url 'two_factor:backup_tokens' %}">Backup codes</a>
-        <a class="btn" href="{% url 'two_factor:disable' %}">Disable 2FA</a>
-      {% endif %}
-    </div>
-    <hr>
-  </div>
-
-  <p style="margin-top:2rem;">
-    Try visiting a protected page that <em>requires</em> OTP:
-    <a href="{% url 'chipin:sensitive' %}">Sensitive area</a>
-  </p>
+<h1>ChipIn</h1>
+<h2>Your Groups</h2>
+<ul>
+    {% for group in user.group_memberships.all %}
+    <li>
+        <a href="{% url 'chipin:group_detail' group.id %}">{{ group.name }}</a>
+        {% if group.admin == request.user %}
+            <a href="{% url 'chipin:delete_group' group.id %}" onclick="return confirm('Are you sure you want to delete this group?');">Delete</a>
+        {% else %}
+            <a href="{% url 'chipin:leave_group' group.id %}" onclick="return confirm('Are you sure you want to leave this group?');">Leave</a>
+        {% endif %}
+    </li>
+    {% empty %}
+    <li>You are not a member of any group yet.</li>
+    {% endfor %}
+</ul>
+<a href="{% url 'chipin:create_group' %}">Create a New Group</a>
 {% endblock %}
