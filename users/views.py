@@ -101,6 +101,7 @@ def top_up(request):
             request.user.profile.save()
             Transaction.objects.create(user=request.user, amount=amount)
             messages.success(request, f"Successfully updated balance. Your new balance is {request.user.profile.balance}")
+            messages.success(request, f"Balance added: {amount}")
             return redirect('chipin:home')
         # Insert top up business logic here
     else: # This is the GET request (member clicks the Top Up link)

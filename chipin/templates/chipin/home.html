@@ -3,7 +3,7 @@
 {% block title %}ChipIn{% endblock %}
 {% block content %}
     <h1>ChipIn</h1>
-    <p>Current balance: {{ request.user.profile.balance }}</p> <a href="{ url 'users:top-up' %}">Top Up Balance</a>
+    <p>Current balance: {{ request.user.profile.balance }}</p> <a href="{% url 'users:top_up' %}">Top Up Balance</a>
     <h2>Group Invitations</h2>
     <div class="invitation-notification">
         {% if pending_invitations %}
