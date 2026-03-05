@@ -1,3 +1,5 @@
+from xxlimited_35 import Null
+
 from django.db import models
 from django.contrib.auth.models import User
 from django.db.models.signals import post_save
@@ -22,7 +24,15 @@ class Profile(models.Model):
         super().save(*args, **kwargs)
 
     def __str__(self):
-        return self.user.username
+        return self.user
+
+class Transaction(models.Model):
+    amount = models.DecimalField(max_digits=5, decimal_places=2)
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.user.username} - ${self.amount}"
 
 def _unique_nickname(base: str) -> str:
     base = (base or "user").strip() or "user"

@@ -7,7 +7,8 @@ from django.http import HttpResponseRedirect
 from django.urls import reverse
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
-from .forms import UserRegistrationForm, EmailAuthenticationForm
+from .forms import UserRegistrationForm, EmailAuthenticationForm, TopUpForm
+from .models import Transaction
 
 RECAPTCHA_VERIFY_URL = "https://www.google.com/recaptcha/api/siteverify"
 
@@ -89,3 +90,19 @@ def logout_view(request):
     logout(request)
     messages.success(request, "Successfully logged out.")
     return redirect('users:login')
+
+@login_required(login_url='users:login')
+def top_up(request):
+    if request.method == 'POST': # This is the POST request (member clicks the sumbit button on the form)
+        form = TopUpForm(request.POST)
+        if form.is_valid():
+            amount = form.cleaned_data['amount']
+            request.user.profile.balance += amount
+            request.user.profile.save()
+            Transaction.objects.create(user=request.user, amount=amount)
+            messages.success(request, f"Successfully updated balance. Your new balance is {request.user.profile.balance}")
+            return redirect('chipin:home')
+        # Insert top up business logic here
+    else: # This is the GET request (member clicks the Top Up link)
+        form = TopUpForm() # Create a blank form
+    return render(request, 'users/top_up.html', {'form': form}) # Send the blank form to the template

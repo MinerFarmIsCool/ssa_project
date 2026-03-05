@@ -52,3 +52,12 @@ class EmailAuthenticationForm(AuthenticationForm):
         label="Email",
         widget=forms.EmailInput(attrs={"autofocus": True})
     )
+
+class TopUpForm(forms.Form):
+    amount = forms.DecimalField(min_value=0.1, max_digits=10, decimal_places=2)
+    label="Amount to Top Up"
+
+    error_messages = {
+        'min_value': "Please enter an amount greater than $0.00.",
+        'invalid': "Enter a valid amount in dollars and cents.",
+    }
