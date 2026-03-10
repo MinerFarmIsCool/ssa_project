@@ -93,7 +93,7 @@ def logout_view(request):
 
 @login_required(login_url='users:login')
 def top_up(request):
-    if request.method == 'POST': # This is the POST request (member clicks the sumbit button on the form)
+    if request.method == 'POST': # This is the POST request (member clicks the submit button on the form)
         form = TopUpForm(request.POST)
         if form.is_valid():
             amount = form.cleaned_data['amount']
@@ -103,7 +103,6 @@ def top_up(request):
             messages.success(request, f"Successfully updated balance. Your new balance is {request.user.profile.balance}")
             messages.success(request, f"Balance added: {amount}")
             return redirect('chipin:home')
-        # Insert top up business logic here
-    else: # This is the GET request (member clicks the Top Up link)
+    else: # This is the GET request (member clicks the Top-Up link)
         form = TopUpForm() # Create a blank form
     return render(request, 'users/top_up.html', {'form': form}) # Send the blank form to the template

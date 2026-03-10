@@ -4,10 +4,93 @@ from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.contrib.auth.models import User
-from .models import Group, Comment
+from users.models import Transaction
+from .models import Group, Comment, GroupJoinRequest, Event
 from .forms import GroupCreationForm, CommentForm
-from .models import GroupJoinRequest
-from .models import Event
+from decimal import Decimal
+from django.db import transaction
+from django.db.models import F
+from django.utils import timezone
+
+@login_required
+def transfer_funds(request, group_id, event_id):
+    if request.method != 'POST':
+        messages.error(request, "invalid request for transfering funds")
+        return redirect('chipin:group_detail', group_id=group_id)
+    event = get_object_or_404(Event, id=event_id, group__id=group_id)
+    group = event.group
+
+    if request.user != group.admin:
+        messages.error(request, "Only the group administrator can transfer funds.")
+        return redirect('chipin:group_detail', group_id=group.id)
+    if event.status == Event.Status.ARCHIVED:
+        messages.error(request, "The funds are already transferred.")
+        return redirect('chipin:group_detail', group_id=group.id)
+    payers_qs = event.members.select_related("profile")
+    if not payers_qs.exists():
+        payers_qs = group.members.select_related("profile")
+    payers = list(payers_qs)
+    include_admin_in_payers = False
+    if include_admin_in_payers and group.admin not in payers:
+        payers.append(group.admin)
+    if not payers:
+        messages.error(request, "No payers found.")
+        return redirect('chipin:group_detail', group_id=group.id)
+    rough_eligible = [u for u in payers if u.profile.balance > 0]
+    if not rough_eligible:
+        messages.error(request, "Nobody has a balance over 0. Aborting.")
+        return redirect('chipin:group_detail', group_id=group.id)
+    share = event.total_spend / Decimal(len(rough_eligible))
+
+    final_payers = []
+    excluded = []
+    for payer in rough_eligible:
+        if payer.profile.balance >= share:
+            final_payers.append(payer)
+        else:
+            excluded.append(payer)
+    if not final_payers:
+        messages.error(request, "No participants could afford the final amoubt :(.")
+        return redirect('chipin:group_detail', group_id=group.id)
+
+    final_share = event.total_spend / Decimal(len(final_payers))
+    with transaction.atomic():
+        for payer in final_payers:
+            payer.profile.balance -= final_share
+            payer.profile.save(update_fields=['balance'])
+            Transaction.objects.create(
+                user=payer,
+                amount=-final_share,
+                created_at=timezone.now(),
+                description=f'Contribution for event {event.name}'
+            )
+
+        admin_profile = group.admin.profile
+        admin_profile.balance += event.total_spend
+        admin_profile.save(update_fields=['balance'])
+        Transaction.objects.create(
+            user=admin_profile,
+            amount=+final_share,
+            created_at=timezone.now(),
+            description=f'Funds received for event {event.name}'
+        )
+
+        event.status = Event.Status.ARCHIVED
+        event.archived_at = timezone.now()
+        event.save(update_fields=['status', 'archived_at'])
+
+    msg = (
+        f"Transferred ${event.total_spend}",
+        f"(${final_share:.2f} each)",
+        f"from {len(final_payers)} payer(s)"
+    )
+
+    if excluded:
+        excluded_names = ", ".join(u.username for u in excluded)
+        msg += f"Excluded due to insufficient balance: {excluded_names}."
+    messages.success(request, msg)
+
+    return redirect('chipin:group_detail', group_id=group.id)
 
 @login_required
 def group_detail(request, group_id, edit_comment_id=None):
@@ -183,12 +266,14 @@ def home(request):
     user_join_requests = GroupJoinRequest.objects.filter(user=user)  # Get join requests sent by the user
     available_groups = Group.objects.exclude(members=user).exclude(join_requests__user=user) # Get groups the user is not a member of and the user has not requested to join
     balance = profile.balance
+    transactions = Transaction.objects.filter(user=request.user).order_by('-created_at')
     context = {
         'pending_invitations': pending_invitations,
         'user_groups': user_groups,
         'user_join_requests': user_join_requests,
         'available_groups': available_groups,
-        'balance': balance
+        'balance': balance,
+        'transactions': transactions
     }
     return render(request, 'chipin/home.html', context)
 

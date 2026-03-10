@@ -1,5 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import User
+from django.utils import timezone
 
 class Group(models.Model):
     name = models.CharField(max_length=100)
@@ -55,3 +56,9 @@ class Event(models.Model):
                 return False
         self.status = self.Status.ACTIVE
         return True
+
+    def archive(self, save=True):
+        self.status = self.Status.ARCHIVED
+        self.archived_at = timezone.now()
+        if save:
+            self.save(update_fields=["status", "archived_at"])
