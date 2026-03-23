@@ -41,6 +41,7 @@ def transfer_funds(request, group_id, event_id):
         messages.error(request, "Nobody has a balance over 0. Aborting.")
         return redirect('chipin:group_detail', group_id=group.id)
     share = event.total_spend / Decimal(len(rough_eligible))
+    share = round(share, 2)
 
     final_payers = []
     excluded = []
@@ -53,7 +54,8 @@ def transfer_funds(request, group_id, event_id):
         messages.error(request, "No participants could afford the final amoubt :(.")
         return redirect('chipin:group_detail', group_id=group.id)
 
-    final_share = event.total_spend / Decimal(len(final_payers))
+    final_share = (event.total_spend / Decimal(len(final_payers)))
+    final_share = round(final_share, 2)
     with transaction.atomic():
         for payer in final_payers:
             payer.profile.balance -= final_share
@@ -69,8 +71,8 @@ def transfer_funds(request, group_id, event_id):
         admin_profile.balance += event.total_spend
         admin_profile.save(update_fields=['balance'])
         Transaction.objects.create(
-            user=admin_profile,
-            amount=+final_share,
+            user=group.admin,
+            amount=+event.total_spend,
             created_at=timezone.now(),
             description=f'Funds received for event {event.name}'
         )
