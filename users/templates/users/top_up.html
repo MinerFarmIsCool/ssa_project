@@ -4,6 +4,7 @@
 {% block content %}
 
     <!-- top up form will go here -->
+    <p>Your current balance is: ${{ request.user.profile.balance }}</p>
     <h2>Top Up Balance</h2>
     <form method="post">
         {% csrf_token %}
